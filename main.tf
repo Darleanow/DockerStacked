@@ -55,10 +55,11 @@ resource "lxd_instance" "swarm_worker2" {
   }
 }
 
-output "swarm_ips" {
-  value = {
-    manager = lxd_instance.swarm_manager.ipv4_address
-    worker1 = lxd_instance.swarm_worker1.ipv4_address
-    worker2 = lxd_instance.swarm_worker2.ipv4_address
-  }
+resource "local_file" "ansible_inventory" {
+  content = templatefile("inventory.tpl", {
+    manager_ip = lxd_instance.swarm_manager.ipv4_address
+    worker1_ip = lxd_instance.swarm_worker1.ipv4_address
+    worker2_ip = lxd_instance.swarm_worker2.ipv4_address
+  })
+  filename = "./ansible/inventory.ini"
 }
