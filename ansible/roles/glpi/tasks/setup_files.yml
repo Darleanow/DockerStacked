@@ -1,0 +1,75 @@
+---
+- name: Create stack directory
+  file:
+    path: "{{ stack.path }}"
+    state: directory
+    mode: '0755'
+
+- name: Create SSL directory
+  file:
+    path: "{{ stack.ssl_path }}"
+    state: directory
+    mode: '0755'
+
+- name: Create temp SSL directory on localhost
+  file:
+    path: /tmp/glpi-ssl
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  become: no
+  run_once: true
+
+- name: Generate self-signed SSL certificate
+  command: >
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048
+    -keyout /tmp/glpi-ssl/nginx.key
+    -out /tmp/glpi-ssl/nginx.crt
+    -subj "/C=FR/ST=Paris/L=Paris/O=GLPI/OU=IT/CN=glpi-cluster"
+    -addext "subjectAltName=IP:{{ manager_ip }},IP:{{ worker1_ip }},IP:{{ worker2_ip }},IP:127.0.0.1,DNS:localhost"
+  args:
+    creates: /tmp/glpi-ssl/nginx.crt
+  delegate_to: localhost
+  become: no
+  run_once: true
+
+- name: Set SSL file permissions
+  file:
+    path: "/tmp/glpi-ssl/{{ item }}"
+    mode: '0644'
+  loop:
+    - nginx.crt
+    - nginx.key
+  delegate_to: localhost
+  become: no
+  run_once: true
+
+- name: Copy SSL certificate to nodes
+  copy:
+    src: /tmp/glpi-ssl/nginx.crt
+    dest: "{{ stack.ssl_path }}/nginx.crt"
+    mode: '0644'
+
+- name: Copy SSL key to nodes
+  copy:
+    src: /tmp/glpi-ssl/nginx.key
+    dest: "{{ stack.ssl_path }}/nginx.key"
+    mode: '0600'
+
+- name: Deploy Nginx configuration
+  template:
+    src: nginx.conf.j2
+    dest: "{{ stack.path }}/nginx.conf"
+    mode: '0644'
+
+- name: Deploy docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ stack.path }}/docker-compose.yml"
+    mode: '0644'
+
+- name: Deploy Swarm stack file
+  template:
+    src: nginx-swarm.yml.j2
+    dest: "{{ stack.path }}/nginx-swarm.yml"
+    mode: '0644'
