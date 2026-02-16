@@ -1,4 +1,4 @@
-+# DockerStacked
+# DockerStacked
 
 Deploy a GLPI instance on Docker Swarm using LXD containers, Terraform and Ansible.
 
