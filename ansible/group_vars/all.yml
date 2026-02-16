@@ -1,0 +1,27 @@
+---
+ansible_python_interpreter: /usr/bin/python3
+
+# Node IPs (resolved from facts)
+manager_ip: "{{ hostvars[groups['managers'][0]]['ansible_default_ipv4']['address'] }}"
+worker1_ip: "{{ hostvars[groups['workers'][0]]['ansible_default_ipv4']['address'] }}"
+worker2_ip: "{{ hostvars[groups['workers'][1]]['ansible_default_ipv4']['address'] }}"
+
+glpi:
+  container_name: glpi-app
+  version: "10.0"
+  timezone: Europe/Paris
+  admin_password: "{{ vault_glpi_admin_password }}"
+  default_users_password: "{{ vault_glpi_default_users_password }}"
+  db:
+    container_name: mariadb-db
+    host: mariadb
+    name: glpidb
+    user: glpi
+    password: "{{ vault_glpi_db_password }}"
+    root_password: "{{ vault_glpi_db_root_password }}"
+    version: "10.11"
+
+stack:
+  path: /opt/glpi-stack
+  ssl_path: /opt/glpi-stack/ssl
+  network: glpi-public
