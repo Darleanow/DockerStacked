@@ -1,0 +1,38 @@
+---
+- name: Create overlay network
+  community.docker.docker_network:
+    name: "{{ stack.network }}"
+    driver: overlay
+    attachable: yes
+    state: present
+  run_once: true
+
+- name: Start backend services
+  command: docker compose up -d
+  args:
+    chdir: "{{ stack.path }}"
+  run_once: true
+
+- name: Wait for MariaDB
+  command: >
+    docker exec {{ glpi.db.container_name }}
+    mysqladmin ping -u root -p'{{ glpi.db.root_password }}' --silent
+  register: mariadb_ready
+  until: mariadb_ready.rc == 0
+  retries: 15
+  delay: 3
+  changed_when: false
+  run_once: true
+
+- name: Deploy Nginx Swarm stack
+  command: docker stack deploy -c "{{ stack.path }}/nginx-swarm.yml" nginx-stack
+  run_once: true
+
+- name: Wait for Nginx replicas
+  command: docker service ls --filter name=nginx-stack --format "{{ '{{' }}.Replicas{{ '}}' }}"
+  register: nginx_replicas
+  until: "'1/1' in nginx_replicas.stdout"
+  retries: 12
+  delay: 5
+  changed_when: false
+  run_once: true
