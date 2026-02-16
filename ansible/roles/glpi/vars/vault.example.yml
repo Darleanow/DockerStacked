@@ -1,0 +1,5 @@
+---
+vault_glpi_db_root_password: "change_me_root_password"
+vault_glpi_db_password: "change_me_db_user_password"
+vault_glpi_admin_password: "change_me_admin_password"
+vault_glpi_default_users_password: "change_me_default_password"
