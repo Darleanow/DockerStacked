@@ -1,0 +1,35 @@
+services:
+  glpi:
+    image: glpi/glpi:{{ glpi.version }}
+    container_name: {{ glpi.container_name }}
+    environment:
+      - TIMEZONE={{ glpi.timezone }}
+    volumes:
+      - glpi-data:/var/glpi
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    networks:
+      - {{ stack.network }}
+
+  mariadb:
+    image: mariadb:{{ glpi.db.version }}
+    container_name: {{ glpi.db.container_name }}
+    environment:
+      - MYSQL_ROOT_PASSWORD={{ glpi.db.root_password }}
+      - MYSQL_DATABASE={{ glpi.db.name }}
+      - MYSQL_USER={{ glpi.db.user }}
+      - MYSQL_PASSWORD={{ glpi.db.password }}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - {{ stack.network }}
+
+volumes:
+  glpi-data:
+  mariadb-data:
+
+networks:
+  {{ stack.network }}:
+    external: true
