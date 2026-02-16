@@ -1,16 +1,55 @@
 # DockerStacked
 
-## Architecture
+Deploy a GLPI instance on Docker Swarm using LXD containers, Terraform and Ansible.
 
-We used LXD for vms
+## Prerequisites
 
-## Considerations
+Ubuntu 20.04+ with sudo access. Install dependencies:
 
-If `terraform apply` fails because LXD isn't running, run it again with `sudo`.
+```bash
+make install
+```
 
-## Authors
+Then initialize LXD if needed (`lxd init`, defaults are fine) and re-login for Docker group.
 
-M2 ESGI GRENOBLE.
+## Usage
 
-Enzo Hugonnier
-Jory Grzeszczak
+```bash
+make vault    # set database and admin passwords
+make deploy   # provision infra + deploy stack
+make status   # check cluster health
+make logs     # tail GLPI logs
+make destroy  # tear everything down
+```
+
+## Structure
+
+```
+├── main.tf                 # LXD container definitions
+├── Makefile                # task runner
+├── install.sh              # dependency installer
+├── setup-vault.sh          # vault password setup
+└── ansible/
+    ├── site.yml            # main playbook
+    ├── ansible.cfg
+    ├── inventory/
+    │   └── hosts.yml
+    ├── group_vars/
+    │   └── all.yml         # shared variables
+    └── roles/
+        ├── common/         # container bootstrap
+        ├── docker/         # docker + swarm setup
+        └── glpi/           # app deployment + config
+```
+
+## Vault
+
+Secrets are stored in `ansible/roles/glpi/vars/vault.yml` (encrypted with `ansible-vault`).
+
+If the file is missing, `make vault` or `make deploy` will create it from the template. Edit with:
+
+```bash
+make vault
+```
+
+Required variables: `vault_glpi_db_root_password`, `vault_glpi_db_password`, `vault_glpi_admin_password`, `vault_glpi_default_users_password`.
