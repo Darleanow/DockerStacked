@@ -1,0 +1,74 @@
+---
+- name: Wait for GLPI container
+  command: docker inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' {{ glpi.container_name }}
+  register: container_status
+  until: container_status.stdout == "true"
+  retries: 10
+  delay: 5
+  run_once: true
+
+- name: Check if GLPI is already installed
+  command: docker exec {{ glpi.container_name }} test -f /var/glpi/config/config_db.php
+  register: glpi_installed
+  failed_when: false
+  changed_when: false
+  run_once: true
+
+- name: Install GLPI database
+  command: >
+    docker exec -u www-data {{ glpi.container_name }} php /var/www/glpi/bin/console db:install
+    --no-interaction
+    --db-host={{ glpi.db.host }}
+    --db-name={{ glpi.db.name }}
+    --db-user={{ glpi.db.user }}
+    --db-password={{ glpi.db.password }}
+    --default-language=fr_FR
+    --force
+    --reconfigure
+  when: glpi_installed.rc != 0
+  run_once: true
+
+- name: Remove install.php
+  command: docker exec {{ glpi.container_name }} rm -f /var/www/glpi/install/install.php
+  failed_when: false
+  changed_when: false
+  run_once: true
+
+- name: Verify database is ready
+  command: >
+    docker exec {{ glpi.db.container_name }}
+    mysql -uroot -p'{{ glpi.db.root_password }}' {{ glpi.db.name }}
+    -e "SELECT 1 FROM glpi_users LIMIT 1"
+  register: db_check
+  until: db_check.rc == 0
+  retries: 10
+  delay: 3
+  changed_when: false
+  run_once: true
+
+- name: Hash admin password
+  command: >
+    docker exec {{ glpi.container_name }}
+    php -r "echo password_hash('{{ glpi.admin_password }}', PASSWORD_BCRYPT);"
+  register: admin_hash
+  changed_when: false
+  run_once: true
+
+- name: Hash default users password
+  command: >
+    docker exec {{ glpi.container_name }}
+    php -r "echo password_hash('{{ glpi.default_users_password }}', PASSWORD_BCRYPT);"
+  register: users_hash
+  changed_when: false
+  run_once: true
+
+- name: Update GLPI passwords
+  command: >
+    docker exec {{ glpi.db.container_name }}
+    mysql -uroot -p'{{ glpi.db.root_password }}' {{ glpi.db.name }}
+    -e "UPDATE glpi_users SET password='{{ admin_hash.stdout }}' WHERE name='glpi';
+        UPDATE glpi_users SET password='{{ users_hash.stdout }}' WHERE name='post-only';
+        UPDATE glpi_users SET password='{{ users_hash.stdout }}' WHERE name='tech';
+        UPDATE glpi_users SET password='{{ users_hash.stdout }}' WHERE name='normal';"
+  run_once: true
+  no_log: true
