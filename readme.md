@@ -1,6 +1,13 @@
-# DockerStacked
++# DockerStacked
 
 Deploy a GLPI instance on Docker Swarm using LXD containers, Terraform and Ansible.
+
+## Disclaimer
+
+I made an iptables change in the script, be careful with it.
+You can see what's done in the Makefile (lines 19-21) and delete those after.
+But it wasn't working without them so I added them to the script so it always works ^^.
+If you already have docker rules feel free to comment lines 19-21.
 
 ## Prerequisites
 
