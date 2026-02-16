@@ -6,9 +6,7 @@ terraform {
   }
 }
 
-provider "lxd" {
-
-}
+provider "lxd" {}
 
 resource "lxd_instance" "swarm_manager" {
   name  = "swarm-manager"
@@ -23,6 +21,8 @@ resource "lxd_instance" "swarm_manager" {
     cpu    = "2"
     memory = "2GB"
   }
+
+  profiles = ["default"]
 }
 
 resource "lxd_instance" "swarm_worker1" {
@@ -38,6 +38,8 @@ resource "lxd_instance" "swarm_worker1" {
     cpu    = "2"
     memory = "2GB"
   }
+
+  profiles = ["default"]
 }
 
 resource "lxd_instance" "swarm_worker2" {
@@ -53,13 +55,15 @@ resource "lxd_instance" "swarm_worker2" {
     cpu    = "2"
     memory = "2GB"
   }
+
+  profiles = ["default"]
 }
 
 resource "local_file" "ansible_inventory" {
   content = templatefile("inventory.tpl", {
-    manager_ip = lxd_instance.swarm_manager.ipv4_address
-    worker1_ip = lxd_instance.swarm_worker1.ipv4_address
-    worker2_ip = lxd_instance.swarm_worker2.ipv4_address
+    manager_ip = "${lxd_instance.swarm_manager.name}.lxd"
+    worker1_ip = "${lxd_instance.swarm_worker1.name}.lxd"
+    worker2_ip = "${lxd_instance.swarm_worker2.name}.lxd"
   })
   filename = "./ansible/inventory.ini"
 }
